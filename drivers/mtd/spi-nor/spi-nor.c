@@ -76,6 +76,7 @@ enum spi_nor_read_command_index {
 	SNOR_CMD_READ_1_8_8,
 	SNOR_CMD_READ_8_8_8,
 	SNOR_CMD_READ_1_8D_8D,
+	SNOR_CMD_READ_8D_8D_8D,
 
 	SNOR_CMD_READ_MAX
 };
@@ -92,6 +93,7 @@ enum spi_nor_pp_command_index {
 	SNOR_CMD_PP_1_1_8,
 	SNOR_CMD_PP_1_8_8,
 	SNOR_CMD_PP_8_8_8,
+	SNOR_CMD_PP_8D_8D_8D,
 
 	SNOR_CMD_PP_MAX
 };
@@ -3010,6 +3012,7 @@ static int spi_nor_hwcaps_read2cmd(u32 hwcaps)
 		{ SNOR_HWCAPS_READ_1_8_8,	SNOR_CMD_READ_1_8_8 },
 		{ SNOR_HWCAPS_OPI,		SNOR_CMD_READ_8_8_8 },
 		{ SNOR_HWCAPS_READ_1_8D_8D,	SNOR_CMD_READ_1_8D_8D },
+		{ SNOR_HWCAPS_OPI_FULL_DTR,	SNOR_CMD_READ_8D_8D_8D },
 	};
 
 	return spi_nor_hwcaps2cmd(hwcaps, hwcaps_read2cmd,
@@ -3026,6 +3029,7 @@ static int spi_nor_hwcaps_pp2cmd(u32 hwcaps)
 		{ SNOR_HWCAPS_PP_1_1_8,		SNOR_CMD_PP_1_1_8 },
 		{ SNOR_HWCAPS_PP_1_8_8,		SNOR_CMD_PP_1_8_8 },
 		{ SNOR_HWCAPS_OPI,		SNOR_CMD_PP_8_8_8 },
+		{ SNOR_HWCAPS_OPI_FULL_DTR,	SNOR_CMD_PP_8D_8D_8D },
 	};
 
 	return spi_nor_hwcaps2cmd(hwcaps, hwcaps_pp2cmd,
