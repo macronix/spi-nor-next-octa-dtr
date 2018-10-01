@@ -196,6 +196,9 @@ static ssize_t spi_nor_spimem_read_data(struct spi_nor *nor, loff_t ofs,
 	/* convert the dummy cycles to the number of bytes */
 	op.dummy.nbytes = (nor->read_dummy * op.dummy.buswidth) / 8;
 
+	if (nor->read_proto & SNOR_PROTO_INST_2BYTE)
+		op.cmd.nbytes = 2;
+
 	spi_nor_adjust_op(nor, &op);
 
 	while (remaining) {
@@ -253,6 +256,9 @@ static ssize_t spi_nor_spimem_write_data(struct spi_nor *nor, loff_t ofs,
 	op.cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->write_proto);
 	op.addr.buswidth = spi_nor_get_protocol_addr_nbits(nor->write_proto);
 	op.data.buswidth = spi_nor_get_protocol_data_nbits(nor->write_proto);
+
+	if (nor->write_proto & SNOR_PROTO_INST_2BYTE)
+		op.cmd.nbytes = 2;
 
 	if (nor->program_opcode == SPINOR_OP_AAI_WP && nor->sst_write_second)
 		op.addr.nbytes = 0;
@@ -2429,13 +2435,13 @@ static int s3an_nor_scan(const struct flash_info *info, struct spi_nor *nor)
 struct spi_nor_read_command {
 	u8			num_mode_clocks;
 	u8			num_wait_states;
-	u8			opcode;
-	enum spi_nor_protocol	proto;
+	u16			opcode;
+	u32			proto;
 };
 
 struct spi_nor_pp_command {
-	u8			opcode;
-	enum spi_nor_protocol	proto;
+	u16			opcode;
+	u32			proto;
 };
 
 enum spi_nor_read_command_index {
@@ -2495,8 +2501,7 @@ static void
 spi_nor_set_read_settings(struct spi_nor_read_command *read,
 			  u8 num_mode_clocks,
 			  u8 num_wait_states,
-			  u8 opcode,
-			  enum spi_nor_protocol proto)
+			  u16 opcode, u32 proto)
 {
 	read->num_mode_clocks = num_mode_clocks;
 	read->num_wait_states = num_wait_states;
@@ -2506,8 +2511,7 @@ spi_nor_set_read_settings(struct spi_nor_read_command *read,
 
 static void
 spi_nor_set_pp_settings(struct spi_nor_pp_command *pp,
-			u8 opcode,
-			enum spi_nor_protocol proto)
+			u16 opcode, u32 proto)
 {
 	pp->opcode = opcode;
 	pp->proto = proto;
@@ -2883,6 +2887,9 @@ static int spi_nor_spimem_check_readop(struct spi_nor *nor,
 	op.dummy.nbytes = (read->num_mode_clocks + read->num_wait_states) *
 			  op.dummy.buswidth / 8;
 
+	if (read->proto & SNOR_PROTO_INST_2BYTE)
+		op.cmd.nbytes = 2;
+
 	/*
 	 * First test with 3 address bytes. The opcode itself might already
 	 * be a 4B addressing opcode but we don't care, because SPI controller
@@ -2910,6 +2917,9 @@ static int spi_nor_spimem_check_progop(struct spi_nor *nor,
 	op.cmd.buswidth = spi_nor_get_protocol_inst_nbits(pp->proto);
 	op.addr.buswidth = spi_nor_get_protocol_addr_nbits(pp->proto);
 	op.data.buswidth = spi_nor_get_protocol_data_nbits(pp->proto);
+
+	if (pp->proto & SNOR_PROTO_INST_2BYTE)
+		op.cmd.nbytes = 2;
 
 	/*
 	 * First test with 3 address bytes. The opcode itself might already
