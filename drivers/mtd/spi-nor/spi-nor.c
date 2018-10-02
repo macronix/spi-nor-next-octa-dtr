@@ -4189,6 +4189,10 @@ static int spi_nor_setup(struct spi_nor *nor, const struct flash_info *info,
 	bool enable_quad_io;
 	int err;
 
+	/* Set ->adjust_op() and ->change_mode(). */
+	nor->adjust_op = info->adjust_op;
+	nor->change_mode = info->change_mode;
+
 	/*
 	 * Keep only the hardware capabilities supported by both the SPI
 	 * controller and the SPI flash memory.
