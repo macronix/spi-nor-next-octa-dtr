@@ -16,6 +16,7 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/math64.h>
+#include <linux/sched/task_stack.h>
 #include <linux/sizes.h>
 #include <linux/slab.h>
 #include <linux/sort.h>
@@ -197,6 +198,7 @@ static int spi_nor_exec_op(struct spi_nor *nor, struct spi_mem_op *op,
 			   u64 *addr, void *buf, unsigned int len)
 {
 	int ret;
+	bool usebouncebuf;
 
 	if (!op || (len && !buf))
 		return -EINVAL;
@@ -208,7 +210,9 @@ static int spi_nor_exec_op(struct spi_nor *nor, struct spi_mem_op *op,
 
 	op->data.nbytes = len;
 
-	if (len && !virt_addr_valid(buf)) {
+	if (object_is_on_stack(buf) || !virt_addr_valid(buf))
+		usebouncebuf = true;
+	if (len && usebouncebuf) {
 		if (len > nor->bouncebuf_size)
 			return -ENOTSUPP;
 
@@ -226,7 +230,7 @@ static int spi_nor_exec_op(struct spi_nor *nor, struct spi_mem_op *op,
 	if (ret)
 		return ret;
 
-	if (!virt_addr_valid(buf) && len && op->data.dir == SPI_MEM_DATA_OUT)
+	if (usebouncebuf && len && op->data.dir == SPI_MEM_DATA_IN)
 		memcpy(buf, nor->bouncebuf, len);
 
 	return 0;
@@ -271,7 +275,7 @@ static ssize_t spi_nor_spimem_read_data(struct spi_nor *nor, loff_t ofs,
 	size_t remaining = len;
 	int ret;
 
-	if (!virt_addr_valid(buf)) {
+	if (object_is_on_stack(buf) || !virt_addr_valid(buf)) {
 		usebouncebuf = true;
 		op.data.buf.in = nor->bouncebuf;
 	}
@@ -342,7 +346,7 @@ static ssize_t spi_nor_spimem_write_data(struct spi_nor *nor, loff_t ofs,
 	bool usebouncebuf = false;
 	int ret;
 
-	if (!virt_addr_valid(buf)) {
+	if (object_is_on_stack(buf) || !virt_addr_valid(buf)) {
 		usebouncebuf = true;
 		op.data.buf.out = nor->bouncebuf;
 	}
