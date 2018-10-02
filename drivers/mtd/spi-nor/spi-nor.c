@@ -1817,6 +1817,7 @@ static void macronix_opi_tweak_params(struct spi_nor *nor,
 				0x12ed,
 				SNOR_PROTO_8_8_8 | SNOR_PROTO_INST_2BYTE);
 
+	/*
 	params->hwcaps.mask |= SNOR_HWCAPS_OPI_FULL_DTR;
 	spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_8D_8D_8D],
 				  0, 20, 0xee11,
@@ -1824,6 +1825,7 @@ static void macronix_opi_tweak_params(struct spi_nor *nor,
 	spi_nor_set_pp_settings(&params->page_programs[SNOR_CMD_PP_8D_8D_8D],
 				0x12ed,
 				SNOR_PROTO_8D_8D_8D | SNOR_PROTO_INST_2BYTE);
+	*/
 }
 
 /* Used when the "_ext_id" is two bytes at most */
