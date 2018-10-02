@@ -565,9 +565,14 @@ static int write_cr2(struct spi_nor *nor, u32 addr, u8 cr2)
 					  SPI_MEM_OP_ADDR(4, addr, 1),
 					  SPI_MEM_OP_NO_DUMMY,
 					  SPI_MEM_OP_DATA_OUT(0, NULL, 1));
+	int ret;
 
 	if (!nor->spimem)
 		return -ENOTSUPP;
+
+	ret = write_enable(nor);
+	if (ret)
+		return ret;
 
 	return spi_nor_data_op(nor, &op, &cr2, 1);
 }
@@ -1693,7 +1698,7 @@ static int macronix_opi_change_mode(struct spi_nor *nor,
 	if (ret)
 		return ret;
 
-	val &= GENMASK(1, 0);
+	val &= ~GENMASK(1, 0);
 
 	switch (newmode) {
 	case SPI_NOR_MODE_SPI:
@@ -1730,6 +1735,7 @@ static void macronix_opi_adjust_op(struct spi_nor *nor, struct spi_mem_op *op)
 	case SPINOR_OP_READ_FAST:
 	case SPINOR_OP_READ_4B:
 	case SPINOR_OP_READ_FAST_4B:
+		op->dummy.nbytes = 20;
 		if (nor->mode == SPI_NOR_MODE_OPI_FULL_DTR)
 			op->cmd.opcode = 0xee;
 		else
@@ -1753,6 +1759,7 @@ static void macronix_opi_adjust_op(struct spi_nor *nor, struct spi_mem_op *op)
 		break;
 
 	case SPINOR_OP_RDSFDP:
+		op->dummy.nbytes = 20;
 		op->addr.nbytes = 4;
 		break;
 
