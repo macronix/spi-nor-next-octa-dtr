@@ -1789,8 +1789,11 @@ static void macronix_opi_adjust_op(struct spi_nor *nor, struct spi_mem_op *op)
 	if (op->addr.nbytes)
 		op->addr.buswidth = 8;
 
-	if (op->dummy.nbytes)
+	if (op->dummy.nbytes) {
 		op->dummy.buswidth = 8;
+		if (op->dummy.dtr)
+			op->dummy.nbytes *= 2;
+	}
 
 	if (op->data.buswidth)
 		op->data.buswidth = 8;
