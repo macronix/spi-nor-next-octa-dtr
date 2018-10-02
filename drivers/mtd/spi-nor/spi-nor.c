@@ -3151,7 +3151,7 @@ spi_nor_spimem_adjust_hwcaps(struct spi_nor *nor,
 		if (!(*hwcaps & BIT(cap)))
 			continue;
 
-		idx = spi_nor_hwcaps_read2cmd(cap);
+		idx = spi_nor_hwcaps_read2cmd(BIT(cap));
 		if (idx < 0)
 			continue;
 
@@ -3166,7 +3166,7 @@ spi_nor_spimem_adjust_hwcaps(struct spi_nor *nor,
 		if (!(*hwcaps & BIT(cap)))
 			continue;
 
-		idx = spi_nor_hwcaps_pp2cmd(cap);
+		idx = spi_nor_hwcaps_pp2cmd(BIT(cap));
 		if (idx < 0)
 			continue;
 
