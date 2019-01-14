@@ -459,6 +459,11 @@ struct spi_nor {
 	int (*change_mode)(struct spi_nor *nor, enum spi_nor_mode newmode);
 	void (*adjust_op)(struct spi_nor *nor, struct spi_mem_op *op);
 
+	struct {
+		struct spi_mem_dirmap_desc *rdesc;
+		struct spi_mem_dirmap_desc *wdesc;
+	} dirmap;
+
 	void *priv;
 };
 

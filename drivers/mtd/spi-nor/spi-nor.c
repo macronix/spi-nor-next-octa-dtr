@@ -300,6 +300,16 @@ static ssize_t spi_nor_spimem_read_data(struct spi_nor *nor, loff_t ofs,
 
 	spi_nor_adjust_op(nor, &op);
 
+	if (nor->dirmap.rdesc) {
+		memcpy(&nor->dirmap.rdesc->info.op_tmpl, &op, sizeof(op));
+		ret = spi_mem_dirmap_read(nor->dirmap.rdesc, ofs, len,
+					  usebouncebuf ? nor->bouncebuf: buf);
+		if (usebouncebuf)
+			memcpy(buf, nor->bouncebuf, op.data.nbytes);
+
+		return ret;
+	}
+
 	while (remaining) {
 		op.data.nbytes = remaining < UINT_MAX ? remaining : UINT_MAX;
 		if (!usebouncebuf)
@@ -4674,6 +4684,77 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 }
 EXPORT_SYMBOL_GPL(spi_nor_scan);
 
+static int spi_nor_create_write_dirmap(struct spi_nor *nor)
+{
+	struct spi_mem_dirmap_info info = {
+		.op_tmpl = SPI_MEM_OP(SPI_MEM_OP_CMD(nor->program_opcode, 1),
+				      SPI_MEM_OP_ADDR(nor->addr_width, 0, 1),
+				      SPI_MEM_OP_NO_DUMMY,
+				      SPI_MEM_OP_DATA_OUT(0, NULL, 1)),
+		.offset = 0,
+		.length = nor->mtd.size,
+	};
+	struct spi_mem_op *op = &info.op_tmpl;
+
+	/* get transfer protocols. */
+	op->cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->write_proto);
+	op->cmd.dtr = spi_nor_protocol_inst_is_dtr(nor->write_proto);
+	op->addr.buswidth = spi_nor_get_protocol_addr_nbits(nor->write_proto);
+	op->addr.dtr = spi_nor_protocol_addr_is_dtr(nor->write_proto);
+	op->data.buswidth = spi_nor_get_protocol_data_nbits(nor->write_proto);
+	op->data.dtr = spi_nor_protocol_data_is_dtr(nor->write_proto);
+
+	if (nor->write_proto & SNOR_PROTO_INST_2BYTE)
+		op->cmd.nbytes = 2;
+
+	if (nor->program_opcode == SPINOR_OP_AAI_WP && nor->sst_write_second)
+		op->addr.nbytes = 0;
+
+	nor->dirmap.wdesc = spi_mem_dirmap_create(nor->spimem, &info);
+	if (IS_ERR(nor->dirmap.wdesc))
+		return PTR_ERR(nor->dirmap.wdesc);
+
+	return 0;
+}
+
+static int spi_nor_create_read_dirmap(struct spi_nor *nor)
+{
+	struct spi_mem_dirmap_info info = {
+		.op_tmpl = SPI_MEM_OP(SPI_MEM_OP_CMD(nor->read_opcode, 1),
+				      SPI_MEM_OP_ADDR(nor->addr_width, 0, 1),
+				      SPI_MEM_OP_DUMMY(nor->read_dummy, 1),
+				      SPI_MEM_OP_DATA_IN(0, NULL, 1)),
+		.offset = 0,
+		.length = nor->mtd.size,
+	};
+	struct spi_mem_op *op = &info.op_tmpl;
+
+	/* get transfer protocols. */
+	op->cmd.buswidth = spi_nor_get_protocol_inst_nbits(nor->read_proto);
+	op->cmd.dtr = spi_nor_protocol_inst_is_dtr(nor->read_proto);
+	op->addr.buswidth = spi_nor_get_protocol_addr_nbits(nor->read_proto);
+	op->addr.dtr = spi_nor_protocol_addr_is_dtr(nor->read_proto);
+	op->dummy.buswidth = op->addr.buswidth;
+	op->dummy.dtr = op->addr.dtr;
+	op->data.buswidth = spi_nor_get_protocol_data_nbits(nor->read_proto);
+	op->data.dtr = spi_nor_protocol_data_is_dtr(nor->read_proto);
+
+	/* convert the dummy cycles to the number of bytes */
+	op->dummy.nbytes = (nor->read_dummy * op->dummy.buswidth) / 8;
+
+	if (op->dummy.dtr)
+		op->dummy.nbytes *= 2;
+
+	if (nor->read_proto & SNOR_PROTO_INST_2BYTE)
+		op->cmd.nbytes = 2;
+
+	nor->dirmap.rdesc = spi_mem_dirmap_create(nor->spimem, &info);
+	if (IS_ERR(nor->dirmap.rdesc))
+		return PTR_ERR(nor->dirmap.rdesc);
+
+	return 0;
+}
+
 static int spi_nor_probe(struct spi_mem *spimem)
 {
 	struct spi_device *spi = spimem->spi;
@@ -4751,6 +4832,14 @@ static int spi_nor_probe(struct spi_mem *spimem)
 			goto err_free_bouncebuf;
 		}
 	}
+
+	ret = spi_nor_create_write_dirmap(nor);
+	if (ret)
+		return ret;
+
+	ret = spi_nor_create_read_dirmap(nor);
+	if (ret)
+		return ret;
 
 	ret = mtd_device_register(&nor->mtd, data ? data->parts : NULL,
 				  data ? data->nr_parts : 0);
