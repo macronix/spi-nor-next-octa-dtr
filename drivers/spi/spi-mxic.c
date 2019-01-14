@@ -230,6 +230,9 @@ static int mxic_spi_data_xfer(struct mxic_spi *mxic, const void *txbuf,
 			      void *rxbuf, unsigned int len)
 {
 	unsigned int pos = 0;
+	bool ddr_enable;
+
+	ddr_enable = (readl(mxic->regs + SS_CTRL(0)) & OP_DATA_DDR);
 
 	while (pos < len) {
 		unsigned int nbytes = len - pos;
@@ -248,6 +251,9 @@ static int mxic_spi_data_xfer(struct mxic_spi *mxic, const void *txbuf,
 		if (ret)
 			return ret;
 
+		if (ddr_enable && len & 0x1)
+			nbytes++;
+
 		writel(data, mxic->regs + TXD(nbytes % 4));
 
 		if (rxbuf) {
@@ -265,6 +271,10 @@ static int mxic_spi_data_xfer(struct mxic_spi *mxic, const void *txbuf,
 
 			data = readl(mxic->regs + RXD);
 			data >>= (8 * (4 - nbytes));
+
+			if (ddr_enable && len & 0x1)
+				nbytes--;
+
 			memcpy(rxbuf + pos, &data, nbytes);
 			WARN_ON(readl(mxic->regs + INT_STS) & INT_RX_NOT_EMPTY);
 		} else {
@@ -341,9 +351,12 @@ static int mxic_spi_mem_exec_op(struct spi_mem *mem,
 
 	if (op->data.nbytes) {
 		ss_ctrl |= OP_DATA_BUSW(fls(op->data.buswidth) - 1) |
-			   (op->data.dtr ? OP_DATA_DDR : 0);
-		if (op->data.dir == SPI_MEM_DATA_IN)
+			   (op->data.dtr ? OP_DATA_DDR | OP_DATA_DDR: 0);
+		if (op->data.dir == SPI_MEM_DATA_IN) {
 			ss_ctrl |= OP_READ;
+			if (op->data.dtr == OP_DATA_DDR)
+				ss_ctrl |= OP_DQS_EN;
+		}
 	}
 
 	writel(ss_ctrl, mxic->regs + SS_CTRL(mem->spi->chip_select));
