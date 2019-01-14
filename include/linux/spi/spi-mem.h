@@ -118,6 +118,7 @@
  * @SPI_MEM_DATA_OUT: data sent the SPI memory
  */
 enum spi_mem_data_dir {
+	SPI_MEM_NO_DATA,
 	SPI_MEM_DATA_IN,
 	SPI_MEM_DATA_OUT,
 };
@@ -189,6 +190,19 @@ struct spi_mem_op {
 		.data = __data,					\
 	}
 
+struct spi_mem_dirmap_info {
+	struct spi_mem_op op_tmpl;
+	u64 offset;
+	u64 length;
+};
+
+struct spi_mem_dirmap_desc {
+	struct spi_mem *mem;
+	struct spi_mem_dirmap_info info;
+	unsigned int nodirmap;
+	void *priv;
+};
+
 /**
  * struct spi_mem - describes a SPI memory device
  * @spi: the underlying SPI device
@@ -256,6 +270,12 @@ struct spi_controller_mem_ops {
 	int (*exec_op)(struct spi_mem *mem,
 		       const struct spi_mem_op *op);
 	const char *(*get_name)(struct spi_mem *mem);
+	int (*dirmap_create)(struct spi_mem_dirmap_desc *desc);
+	void (*dirmap_destroy)(struct spi_mem_dirmap_desc *desc);
+	ssize_t (*dirmap_read)(struct spi_mem_dirmap_desc *desc,
+			       u64 offs, size_t len, void *buf);
+	ssize_t (*dirmap_write)(struct spi_mem_dirmap_desc *desc,
+				u64 offs, size_t len, const void *buf);
 };
 
 /**
@@ -315,6 +335,16 @@ int spi_mem_exec_op(struct spi_mem *mem,
 		    const struct spi_mem_op *op);
 
 const char *spi_mem_get_name(struct spi_mem *mem);
+
+struct spi_mem_dirmap_desc *
+spi_mem_dirmap_create(struct spi_mem *mem,
+		      const struct spi_mem_dirmap_info *info);
+void spi_mem_dirmap_destroy(struct spi_mem_dirmap_desc *desc);
+ssize_t spi_mem_dirmap_read(struct spi_mem_dirmap_desc *desc,
+			    u64 offs, size_t len, void *buf);
+ssize_t spi_mem_dirmap_write(struct spi_mem_dirmap_desc *desc,
+			     u64 offs, size_t len, const void *buf);
+
 
 int spi_mem_driver_register_with_owner(struct spi_mem_driver *drv,
 				       struct module *owner);
