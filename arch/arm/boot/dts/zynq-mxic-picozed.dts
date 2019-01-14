@@ -39,7 +39,7 @@
 
 	spi@43c30000 {
 		compatible = "mxicy,mx25f0a-spi";
-		reg = <0x43c30000 0x10000>, <0xa0000000 0x20000000>;
+		reg = <0x43c30000 0x10000>, <0xa0000000 0x4000000>;
 		reg-names = "regs", "dirmap";
 		clocks = <&clkwizard 0>, <&clkwizard 1>, <&clkc 18>;
 		clock-names = "send_clk", "send_dly_clk", "ps_clk";
