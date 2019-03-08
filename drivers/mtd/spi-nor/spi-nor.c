@@ -303,7 +303,7 @@ static ssize_t spi_nor_spimem_read_data(struct spi_nor *nor, loff_t ofs,
 	if (nor->dirmap.rdesc) {
 		memcpy(&nor->dirmap.rdesc->info.op_tmpl, &op, sizeof(op));
 		ret = spi_mem_dirmap_read(nor->dirmap.rdesc, ofs, len,
-					  usebouncebuf ? nor->bouncebuf: buf);
+					  usebouncebuf ? nor->bouncebuf : buf);
 		if (usebouncebuf)
 			memcpy(buf, nor->bouncebuf, op.data.nbytes);
 
@@ -603,15 +603,20 @@ static int spi_nor_change_mode(struct spi_nor *nor, u32 newmode)
 
 	nor->mode = newmode;
 
-	/* currently, we set-up read_proto, write_proto and reg_proto for
-	   OPI & OPI_DTR mode */
-	if (nor->mode == SPI_NOR_MODE_OPI)
-		nor->read_proto = nor->write_proto = nor->reg_proto =
-				SNOR_PROTO_8_8_8 | SNOR_PROTO_INST_2BYTE;
+	/*
+	 * Currently, we set-up read_proto, write_proto and reg_proto for
+	 * OPI & OPI_DTR mode
+	 */
+	if (nor->mode == SPI_NOR_MODE_OPI) {
+		nor->read_proto = SNOR_PROTO_8_8_8 | SNOR_PROTO_INST_2BYTE;
+		nor->write_proto = SNOR_PROTO_8_8_8 | SNOR_PROTO_INST_2BYTE;
+		nor->reg_proto = SNOR_PROTO_8_8_8 | SNOR_PROTO_INST_2BYTE;
 
-	else if (nor->mode == SPI_NOR_MODE_OPI_FULL_DTR)
-		nor->read_proto = nor->write_proto = nor->reg_proto =
-				SNOR_PROTO_8D_8D_8D | SNOR_PROTO_INST_2BYTE;
+	} else if (nor->mode == SPI_NOR_MODE_OPI_FULL_DTR) {
+		nor->read_proto = SNOR_PROTO_8D_8D_8D | SNOR_PROTO_INST_2BYTE;
+		nor->write_proto = SNOR_PROTO_8D_8D_8D | SNOR_PROTO_INST_2BYTE;
+		nor->reg_proto = SNOR_PROTO_8D_8D_8D | SNOR_PROTO_INST_2BYTE;
+	}
 
 	if (nor->mode >= SPI_NOR_MODE_OPI)
 		nor->spimem->spi->mode |= SPI_TX_OCTO | SPI_RX_OCTO;
@@ -1820,7 +1825,10 @@ static void macronix_opi_adjust_op(struct spi_nor *nor, struct spi_mem_op *op)
 		op->data.buswidth = 8;
 
 	if (nor->mode == SPI_NOR_MODE_OPI_FULL_DTR) {
-		op->addr.dtr = op->dummy.dtr = op->data.dtr = op->cmd.dtr = 1;
+		op->addr.dtr = 1;
+		op->dummy.dtr = 1;
+		op->data.dtr = 1;
+		op->cmd.dtr = 1;
 		op->dummy.nbytes *= 2;
 	}
 

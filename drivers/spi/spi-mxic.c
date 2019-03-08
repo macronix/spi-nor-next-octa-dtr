@@ -432,7 +432,7 @@ static int mxic_spi_mem_exec_op(struct spi_mem *mem,
 	writel(HC_EN_BIT, mxic->regs + HC_EN);
 
 	writel(mxic_spi_mem_prep_op_cfg(op),
-		        mxic->regs + SS_CTRL(mem->spi->chip_select));
+	       mxic->regs + SS_CTRL(mem->spi->chip_select));
 	writel(readl(mxic->regs + HC_CFG) | HC_CFG_MAN_CS_ASSERT,
 	       mxic->regs + HC_CFG);
 
@@ -710,11 +710,10 @@ static int mxic_spi_probe(struct platform_device *pdev)
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dirmap");
 	mxic->linear.map = devm_ioremap_resource(&pdev->dev, res);
-	if (!IS_ERR(mxic->linear.map)) {
+	if (!IS_ERR(mxic->linear.map))
 		mxic->linear.size = resource_size(res);
-	} else {
+	else
 		mxic->linear.map = NULL;
-	}
 
 	ret = clk_prepare_enable(mxic->ps_clk);
 	if (ret)
